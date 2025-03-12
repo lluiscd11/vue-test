@@ -1,133 +1,148 @@
-<template>  
-    <div class="dynamic-form">
-        <form @submit.prevent="onSubmit" class="form-group">
-            <div v-for="(field) in fieldDefinitions" :key="field.id" class="form-field">
-                <label>{{ field.label }}</label>
-                <component :is="getComponentName(field)" :field="field"
-                    :modelValue="modelValue ? modelValue[field.id] : ''" 
-                    @update="updateFormData"
-                    :ref="el => setFieldRef(field, el)" />
-            </div>
-            <div class="button-container">
-                <button type="submit" class="button primary">Guardar</button>
-            </div>
-
-        </form>
-        <label id="result-label">Result:</label><br/>
-        <textarea id="result" rows="10" cols="50" disabled></textarea>
-    </div>
+<template>
+  <div class="dynamic-form">
+    <form @submit.prevent="onSubmit" class="form-group">
+      <div v-for="field in fieldDefinitions" :key="field.id" class="form-field">
+        <label>{{ field.label }}</label>
+        <component
+          :is="getComponentName(field)"
+          :field="field"
+          :modelValue="modelValue ? modelValue[field.id] : ''"
+          @update="updateFormData"
+          :ref="(el) => setFieldRef(field, el)"
+        />
+      </div>
+      <div class="button-container">
+        <button type="submit" class="button primary">Guardar</button>
+      </div>
+    </form>
+    <label id="result-label">Result:</label><br />
+    <textarea id="result" rows="10" cols="50" disabled></textarea>
+  </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, defineAsyncComponent, isProxy, toRaw, watch } from 'vue';
-import fieldMixin from './FieldMixin';
-const emit = defineEmits(['update', 'formSubmit']);
+import {
+  ref,
+  reactive,
+  computed,
+  defineAsyncComponent,
+  isProxy,
+  toRaw,
+  watch,
+} from "vue";
+import fieldMixin from "./FieldMixin";
+const emit = defineEmits(["update", "formSubmit"]);
 const fieldRefs = {};
 
 const props = defineProps({
-    fieldDefinitions: {
-        type: Array,
-        required: true,
-    },
-    modelValue: {
-        type: Object,
-        default: () => ({}),
-    }
+  fieldDefinitions: {
+    type: Array,
+    required: true,
+  },
+  modelValue: {
+    type: Object,
+    default: () => ({}),
+  },
 });
 let { handleChange, valueFromEvent } = fieldMixin.setup(props, { emit });
 
 let formData = toRaw(props.modelValue);
 
-watch(() => props.modelValue, (newVal) => {
+watch(
+  () => props.modelValue,
+  (newVal) => {
     formData = toRaw(newVal);
-});
+  }
+);
 
 const setFieldRef = (field, ref) => {
-    fieldRefs[field.id] = ref;
-}
+  fieldRefs[field.id] = ref;
+};
 
 const setSelected = (fieldId, value) => {
-    let refs = fieldRefs;
-    refs[fieldId].setSelected(value);
-}
+  let refs = fieldRefs;
+  refs[fieldId].setSelected(value);
+};
 
 const updateFormData = (idAndValue) => {
-    let { id, value } = { ...idAndValue };
-    formData = {
-        ...formData,
-        [id]: value,
-    };
+  let { id, value } = { ...idAndValue };
+  formData = {
+    ...formData,
+    [id]: value,
+  };
 
-    emit('update', {
-        value: toRaw(formData),
-    });
+  emit("update", {
+    value: toRaw(formData),
+  });
 };
 
 const onSubmit = (event) => {
+  emit("formSubmit", formData);
 
-    emit('formSubmit', formData);
+  // Ordenar los datos antes de mostrarlos
+  const orderedData = { name: formData.name, options: formData.options };
 
-    // set in text area
-    document.querySelector('#result').value = JSON.stringify(formData);
+  // set in text area
+  document.querySelector("#result").value = JSON.stringify(orderedData);
 
-    event.preventDefault();
-    event.stopPropagation();
+  event.preventDefault();
+  event.stopPropagation();
 };
 
 const getComponentName = (field) => {
+  let compName = field.type.charAt(0).toUpperCase() + field.type.slice(1);
 
-    let compName = field.type.charAt(0).toUpperCase() + field.type.slice(1);
-    
-    // Convert to CamelCase 
-    compName = compName.replace(/[_-](\w)/g, (_, match) => match.toUpperCase());
+  // Convert to CamelCase
+  compName = compName.replace(/[_-](\w)/g, (_, match) => match.toUpperCase());
 
-    return defineAsyncComponent(() => import(`./fields/${compName}Field.vue`));
+  return defineAsyncComponent(() => import(`./fields/${compName}Field.vue`));
 };
 
 defineExpose({
-    setSelected,
+  setSelected,
 });
-
 </script>
 
 <style scoped>
 .form-group {
-    margin-bottom: 1rem;
+  margin-bottom: 1rem;
 }
 
 .is-invalid {
-    border-color: red;
+  border-color: red;
 }
 
 label {
-    display: inline-block;
-    width: 100px;
-    margin-bottom: 10px;
+  display: inline-block;
+  width: 100px;
+  margin-bottom: 10px;
 
-    &#result-label {
-        width: 100%;
-        text-align: left;
-    }
-}
-input, select, textarea {
-    padding: 5px;
+  &#result-label {
     width: 100%;
-    margin-bottom: 10px;
+    text-align: left;
+  }
+}
+input,
+select,
+textarea {
+  padding: 5px;
+  width: 100%;
+  margin-bottom: 10px;
 }
 
 [disabled] {
-    cursor: not-allowed;
+  cursor: not-allowed;
 }
 .button-container {
-    text-align: center;
-    margin-bottom: 20px;
+  text-align: center;
+  margin-bottom: 20px;
 
-    button {
-        margin: auto;
-    }
+  button {
+    margin: auto;
+  }
 }
 .form-field {
-    display: flex;
-    align-items: center;
+  display: flex;
+  align-items: center;
 }
 </style>
